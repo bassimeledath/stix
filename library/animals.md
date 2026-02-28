@@ -2,14 +2,7 @@
 
 All animals defined relative to hip/body center at (0, 0). Position on stage via `transform="translate(X, Y)"`.
 
-Animals use the same line style as characters:
-```css
-stroke: #2a2a2a;
-stroke-width: 2.4;
-stroke-linecap: round;
-stroke-linejoin: round;
-fill: none;
-```
+Animals use the same line style as characters (`stroke: #2a2a2a`, `stroke-linecap: round`, `stroke-linejoin: round`, `fill: none`) with scaled stroke widths per animal size (cat/dog `2`, bird `1.8`, mouse `1.5`).
 
 ---
 
@@ -38,14 +31,14 @@ fill: none;
   <circle cx="-38" cy="-7" r="1" fill="#2a2a2a" />
 
   <!-- Front legs -->
-  <line x1="-15" y1="0" x2="-15" y2="20" />
-  <line x1="-10" y1="0" x2="-10" y2="20" />
+  <line x1="-15" y1="0" x2="-15" y2="20" class="cat-front-l" />
+  <line x1="-10" y1="0" x2="-10" y2="20" class="cat-front-r" />
   <!-- Back legs -->
-  <line x1="15" y1="0" x2="15" y2="20" />
-  <line x1="20" y1="0" x2="20" y2="20" />
+  <line x1="15" y1="0" x2="15" y2="20" class="cat-back-l" />
+  <line x1="20" y1="0" x2="20" y2="20" class="cat-back-r" />
 
   <!-- Tail (curved upward) -->
-  <path d="M 20 0 Q 35 -5 30 -20" />
+  <path d="M 20 0 Q 35 -5 30 -20" class="cat-tail" />
 </g>
 ```
 
@@ -116,7 +109,7 @@ fill: none;
   <path d="M 23 0 L 20 12 L 23 25" />
 
   <!-- Tail (wagging) -->
-  <path d="M 25 0 Q 38 -15 32 -25" />
+  <path d="M 25 0 Q 38 -15 32 -25" class="dog-tail" />
 </g>
 ```
 
@@ -147,7 +140,7 @@ fill: none;
   <!-- Beak -->
   <path d="M -17 -4 L -22 -3 L -17 -2" fill="#e8a85c" stroke="#e8a85c" stroke-width="1" />
   <!-- Wing -->
-  <path d="M -2 -4 Q 8 -18 18 -8" stroke-width="2" />
+  <path d="M -2 -4 Q 8 -18 18 -8" stroke-width="2" class="bird-wing" />
   <!-- Tail feathers -->
   <path d="M 10 0 L 18 -4" />
   <path d="M 10 0 L 18 2" />

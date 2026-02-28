@@ -95,7 +95,8 @@ All scenes use `viewBox="0 0 900 400"`. Ground dashed line at `y=355`.
 
 - Each scene: **8 seconds** total, `animation-duration: 8s`
 - All animations loop with `infinite`
-- Use `ease-in-out` for natural movement
+- Use `ease-in-out` for natural movement (default for most motions)
+- Use `linear` for constant-speed locomotion (walk-across, run cycles, character_translate) where acceleration would look unnatural
 - Sub-loops (walk cycles, etc.) use their own shorter duration (0.4-0.5s)
 - Phase-based scenes split 8s into equal segments (e.g., 4 phases = 2s each)
 

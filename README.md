@@ -54,11 +54,11 @@ Files are written to `.animate/output/` in the current working directory:
 
 The skill includes a curated library of SVG components:
 
-- **15 named poses** — standing, walking, running, sitting, jumping, dancing, etc.
-- **8 facial expressions** — happy, sad, neutral, surprised, determined, angry, laughing, crying
-- **17 props** — bench, table, heart, barbell, sun, cloud, tree, pizza, salad, coffee mug, etc.
+- **16 named poses** — standing, walking, running, sitting, jumping, dancing, etc.
+- **9 facial expressions** — happy, sad, neutral, surprised, determined, angry, laughing, crying, smirk
+- **21 props** — bench, table, heart, barbell, sun, cloud, tree, pizza, salad, coffee mug, etc.
 - **4 animals** — cat, dog, bird, mouse with walk cycles
-- **9 transition patterns** — walk cycle, run cycle, sit down, jump, phase transition, etc.
+- **11 transition patterns** — walk cycle, run cycle, sit down, jump, phase transition, etc.
 
 ## Architecture
 

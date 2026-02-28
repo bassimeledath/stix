@@ -2,6 +2,8 @@
 
 CSS keyframe patterns for common motions. All timings assume `animation-duration: 8s` for the scene and `infinite` looping.
 
+Example values below use the default hip position **(450, 295)**, giving shoulder at (450, 258), head center at (450, 235), knee-Y at 330, and feet-Y at 348. **Adjust these values per character position.**
+
 ---
 
 ## walk_cycle
@@ -15,16 +17,16 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
   animation: walkLegL 0.5s ease-in-out infinite;
 }
 @keyframes walkLegL {
-  0%, 100% { d: path("M HIP_X HIP_Y L HIP_X-15 KNEE_Y L HIP_X-15 FEET_Y"); }
-  50%      { d: path("M HIP_X HIP_Y L HIP_X+15 KNEE_Y L HIP_X+15 FEET_Y"); }
+  0%, 100% { d: path("M 450 295 L 435 330 L 435 348"); }
+  50%      { d: path("M 450 295 L 465 330 L 465 348"); }
 }
 
 .walk-leg-r {
   animation: walkLegR 0.5s ease-in-out infinite;
 }
 @keyframes walkLegR {
-  0%, 100% { d: path("M HIP_X HIP_Y L HIP_X+15 KNEE_Y L HIP_X+15 FEET_Y"); }
-  50%      { d: path("M HIP_X HIP_Y L HIP_X-15 KNEE_Y L HIP_X-15 FEET_Y"); }
+  0%, 100% { d: path("M 450 295 L 465 330 L 465 348"); }
+  50%      { d: path("M 450 295 L 435 330 L 435 348"); }
 }
 
 /* Arm swing (opposite phase to legs) */
@@ -32,16 +34,16 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
   animation: walkArmL 0.5s ease-in-out infinite;
 }
 @keyframes walkArmL {
-  0%, 100% { d: path("M SH_X SH_Y L SH_X-18 SH_Y+20 L SH_X-20 SH_Y+35"); }
-  50%      { d: path("M SH_X SH_Y L SH_X+18 SH_Y+20 L SH_X+20 SH_Y+35"); }
+  0%, 100% { d: path("M 450 258 L 432 278 L 430 293"); }
+  50%      { d: path("M 450 258 L 468 278 L 470 293"); }
 }
 
 .walk-arm-r {
   animation: walkArmR 0.5s ease-in-out infinite;
 }
 @keyframes walkArmR {
-  0%, 100% { d: path("M SH_X SH_Y L SH_X+18 SH_Y+20 L SH_X+20 SH_Y+35"); }
-  50%      { d: path("M SH_X SH_Y L SH_X-18 SH_Y+20 L SH_X-20 SH_Y+35"); }
+  0%, 100% { d: path("M 450 258 L 468 278 L 470 293"); }
+  50%      { d: path("M 450 258 L 432 278 L 430 293"); }
 }
 
 /* Bounce (apply to character group) */
@@ -57,12 +59,12 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
 ## run_cycle
 
 **Duration:** 0.4s sub-loop
-**Use:** Faster locomotion. Wider stride, more body lean.
+**Use:** Faster locomotion. Wider stride, more body lean. Uses `linear` timing for smooth locomotion.
 
 ```css
 .run-leg-l {
   animation: runLegL 0.4s linear infinite;
-  transform-origin: HIP_X HIP_Y;
+  transform-origin: 450px 295px;  /* hip position */
 }
 @keyframes runLegL {
   0%   { transform: rotate(-20deg); }
@@ -72,7 +74,7 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
 
 .run-leg-r {
   animation: runLegR 0.4s linear infinite;
-  transform-origin: HIP_X HIP_Y;
+  transform-origin: 450px 295px;
 }
 @keyframes runLegR {
   0%   { transform: rotate(20deg); }
@@ -82,7 +84,7 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
 
 .run-arm-l {
   animation: runArmL 0.4s linear infinite;
-  transform-origin: SH_X SH_Y;
+  transform-origin: 450px 258px;  /* shoulder position */
 }
 @keyframes runArmL {
   0%   { transform: rotate(15deg); }
@@ -92,7 +94,7 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
 
 .run-arm-r {
   animation: runArmR 0.4s linear infinite;
-  transform-origin: SH_X SH_Y;
+  transform-origin: 450px 258px;
 }
 @keyframes runArmR {
   0%   { transform: rotate(-15deg); }
@@ -120,8 +122,8 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
   animation: sitLegs 8s ease-in-out infinite;
 }
 @keyframes sitLegs {
-  0%, 20%  { d: path("M HIP_X HIP_Y L HIP_X-15 KNEE_Y L HIP_X-20 FEET_Y"); }
-  40%, 100% { d: path("M HIP_X HIP_Y L HIP_X-13 HIP_Y+23 L HIP_X-20 HIP_Y+53"); }
+  0%, 20%  { d: path("M 450 295 L 435 330 L 430 348"); }
+  40%, 100% { d: path("M 450 295 L 437 318 L 430 348"); }
 }
 ```
 
@@ -166,7 +168,7 @@ CSS keyframe patterns for common motions. All timings assume `animation-duration
 ```css
 .wave-hand {
   animation: waveHand 1s ease-in-out infinite;
-  transform-origin: SH_X SH_Y;
+  transform-origin: 450px 258px;  /* shoulder position */
 }
 @keyframes waveHand {
   0%, 100% { transform: rotate(-5deg); }
@@ -212,7 +214,7 @@ Adjust percentage boundaries for 2-phase (50/50), 3-phase (33/33/33), etc.
 
 ## character_translate
 
-**Use:** Move character across the stage over the full 8s loop.
+**Use:** Move character across the stage over the full 8s loop. Uses `linear` timing for smooth constant-speed locomotion.
 
 ```css
 /* Left to right walk */
@@ -246,7 +248,7 @@ Adjust percentage boundaries for 2-phase (50/50), 3-phase (33/33/33), etc.
 
 ## emotion_shift
 
-**Use:** Animate facial expression changes (mouth path morphing).
+**Use:** Animate facial expression changes (mouth path morphing). Values below use default head center at (450, 235). Adjust per character position.
 
 ```css
 /* Neutral → sad */
@@ -254,8 +256,8 @@ Adjust percentage boundaries for 2-phase (50/50), 3-phase (33/33/33), etc.
   animation: mouthSad 8s ease-in-out infinite;
 }
 @keyframes mouthSad {
-  0%, 48%   { d: path("M CX-8 CY+5 L CX+8 CY+5"); }           /* neutral */
-  60%, 100% { d: path("M CX-8 CY+7 Q CX CY+0 CX+8 CY+7"); }  /* sad */
+  0%, 48%   { d: path("M 442 240 L 458 240"); }                /* neutral */
+  60%, 100% { d: path("M 442 242 Q 450 235 458 242"); }        /* sad */
 }
 
 /* Neutral → happy */
@@ -263,8 +265,8 @@ Adjust percentage boundaries for 2-phase (50/50), 3-phase (33/33/33), etc.
   animation: mouthHappy 8s ease-in-out infinite;
 }
 @keyframes mouthHappy {
-  0%, 48%   { d: path("M CX-8 CY+5 L CX+8 CY+5"); }                /* neutral */
-  60%, 100% { d: path("M CX-8 CY+5 Q CX CY+15 CX+8 CY+5"); }      /* happy */
+  0%, 48%   { d: path("M 442 240 L 458 240"); }                /* neutral */
+  60%, 100% { d: path("M 442 240 Q 450 250 458 240"); }        /* happy */
 }
 ```
 
@@ -275,7 +277,7 @@ Adjust percentage boundaries for 2-phase (50/50), 3-phase (33/33/33), etc.
 ```css
 .head-drop {
   animation: headDrop 8s ease-in-out infinite;
-  transform-origin: HEAD_CX HEAD_CY;
+  transform-origin: 450px 235px;  /* head center position */
 }
 @keyframes headDrop {
   0%, 72%   { transform: translate(0, 0) rotate(0deg); }

@@ -27,62 +27,62 @@ Neutral upright stance, arms relaxed at sides.
 
 ## walking_a
 
-Left foot forward, right arm forward (first frame of walk cycle).
+Left foot forward, right arm forward (first frame of walk cycle). Forward leg reaches ahead with bent knee; back leg pushes off straighter.
 
 ```svg
 <!-- Torso -->
 <line x1="0" y1="-42" x2="0" y2="0" class="char-body" />
 <!-- Arms -->
-<path d="M 0 -37 L -18 -20 L -20 -5" class="char-body" />   <!-- left arm back -->
-<path d="M 0 -37 L 18 -20 L 20 -5" class="char-body" />     <!-- right arm forward -->
+<path d="M 0 -37 L -12 -18 L -5 -5" class="char-body" />    <!-- left arm trailing back -->
+<path d="M 0 -37 L 15 -22 L 22 -12" class="char-body" />    <!-- right arm swinging forward -->
 <!-- Legs -->
-<path d="M 0 0 L -15 35 L -15 53" class="char-body" />      <!-- left leg forward -->
-<path d="M 0 0 L 15 35 L 15 53" class="char-body" />        <!-- right leg back -->
+<path d="M 0 0 L -18 28 L -22 50" class="char-body" />      <!-- left leg forward (knee bent ahead) -->
+<path d="M 0 0 L 12 32 L 8 53" class="char-body" />         <!-- right leg back (pushing off) -->
 ```
 
 ## walking_b
 
-Right foot forward, left arm forward (second frame of walk cycle).
+Right foot forward, left arm forward (second frame of walk cycle). Mirror stride of walking_a.
 
 ```svg
 <!-- Torso -->
 <line x1="0" y1="-42" x2="0" y2="0" class="char-body" />
 <!-- Arms -->
-<path d="M 0 -37 L 18 -20 L 20 -5" class="char-body" />    <!-- right arm back -->
-<path d="M 0 -37 L -18 -20 L -20 -5" class="char-body" />  <!-- left arm forward -->
+<path d="M 0 -37 L 12 -18 L 5 -5" class="char-body" />     <!-- right arm trailing back -->
+<path d="M 0 -37 L -15 -22 L -22 -12" class="char-body" />  <!-- left arm swinging forward -->
 <!-- Legs -->
-<path d="M 0 0 L 15 35 L 15 53" class="char-body" />       <!-- right leg forward -->
-<path d="M 0 0 L -15 35 L -15 53" class="char-body" />     <!-- left leg back -->
+<path d="M 0 0 L 18 28 L 22 50" class="char-body" />        <!-- right leg forward (knee bent ahead) -->
+<path d="M 0 0 L -12 32 L -8 53" class="char-body" />       <!-- left leg back (pushing off) -->
 ```
 
 ## running_a
 
-Extended stride, left foot forward. Arms pumping.
+Extended stride, left foot forward. Arms pumping with tight elbows. Forward leg reaches far out; back leg trails behind pushing off.
 
 ```svg
-<!-- Torso (slight forward lean) -->
-<line x1="0" y1="-42" x2="2" y2="0" class="char-body" />
-<!-- Arms (pumping) -->
-<path d="M 0 -37 L -20 -25 L -28 -15" class="char-body" />
-<path d="M 0 -37 L 20 -25 L 28 -15" class="char-body" />
-<!-- Legs (extended stride) -->
-<path d="M 0 0 L -20 30 L -22 53" class="char-body" />
-<path d="M 0 0 L 20 30 L 22 53" class="char-body" />
+<!-- Torso (forward lean) -->
+<line x1="0" y1="-42" x2="3" y2="0" class="char-body" />
+<!-- Arms (pumping, elbows bent tight) -->
+<path d="M 0 -37 L -15 -32 L -10 -22" class="char-body" />  <!-- left arm back -->
+<path d="M 0 -37 L 22 -30 L 18 -20" class="char-body" />    <!-- right arm forward -->
+<!-- Legs (wide stride) -->
+<path d="M 0 0 L -22 22 L -28 45" class="char-body" />      <!-- left leg extended forward -->
+<path d="M 0 0 L 15 25 L 22 48" class="char-body" />        <!-- right leg pushing off behind -->
 ```
 
 ## running_b
 
-Extended stride, right foot forward.
+Extended stride, right foot forward. Mirror of running_a.
 
 ```svg
-<!-- Torso -->
-<line x1="0" y1="-42" x2="2" y2="0" class="char-body" />
+<!-- Torso (forward lean) -->
+<line x1="0" y1="-42" x2="3" y2="0" class="char-body" />
 <!-- Arms (opposite pump) -->
-<path d="M 0 -37 L 20 -25 L 28 -15" class="char-body" />
-<path d="M 0 -37 L -20 -25 L -28 -15" class="char-body" />
-<!-- Legs -->
-<path d="M 0 0 L 20 30 L 22 53" class="char-body" />
-<path d="M 0 0 L -20 30 L -22 53" class="char-body" />
+<path d="M 0 -37 L 15 -32 L 10 -22" class="char-body" />    <!-- right arm back -->
+<path d="M 0 -37 L -22 -30 L -18 -20" class="char-body" />  <!-- left arm forward -->
+<!-- Legs (wide stride) -->
+<path d="M 0 0 L 22 22 L 28 45" class="char-body" />        <!-- right leg extended forward -->
+<path d="M 0 0 L -15 25 L -22 48" class="char-body" />      <!-- left leg pushing off behind -->
 ```
 
 ## sitting
@@ -115,11 +115,11 @@ Slouched sitting — torso rotated forward, head drooped. Use `transform-origin`
 <path d="M 0 0 L 13 23 L 20 53" class="char-body" />
 ```
 
-CSS to animate slump:
+CSS to animate slump (example using default hip at 450, 295 — shoulder-Y is 258):
 ```css
 .slump-group {
   animation: slump 8s ease-in-out infinite;
-  transform-origin: HIP_X SHOULDER_Y;
+  transform-origin: 450px 258px;  /* adjust per character position */
 }
 @keyframes slump {
   0%, 72% { transform: rotate(0deg); }

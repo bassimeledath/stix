@@ -21,10 +21,11 @@ Parse the user's prompt and infer these parameters. The user never sees or sets 
 | Parameter | Range | Default | How to infer |
 |-----------|-------|---------|--------------|
 | `scenes` | 1–6 | 2 | Count distinct moments/locations/emotional beats in the prompt |
-| `length` | 4–30s | 8s per scene | More complex = longer |
 | `fps` | 8–24 | 8 | Default for most; use 12 for fast action |
 | `format` | gif/mp4/both | both | Default both unless user specifies |
 | `mood` | playful/melancholy/energetic/calm | playful | Infer from the emotion in the prompt |
+
+Each scene is always **8 seconds** (the animation system is built around this fixed duration).
 
 Write these to `.animate/params.json`:
 
@@ -103,42 +104,76 @@ Break the prompt into scenes. Write `.animate/story.json`:
 
 For each scene, spawn a background worker using the Claude CLI. All workers run in parallel.
 
+**Read the scene count from story.json:**
+
+```bash
+TOTAL_SCENES=$(python3 -c "import json; print(len(json.load(open('.animate/story.json'))['scenes']))")
+```
+
+**The dispatcher must read and inject all library file contents into each worker prompt.** Workers run as independent `claude -p` subprocesses and cannot access the skill directory. The dispatcher is responsible for assembling the full prompt with all necessary context inline.
+
 **For each scene N:**
 
-1. Build the worker prompt by assembling context from the component library:
+1. Build the worker prompt by reading and injecting library contents:
 
 ```bash
 SKILL_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || cd "$(dirname "$0")" && pwd)"
 # If SKILL_DIR detection fails, try common install locations:
 # ~/.claude/skills/animate or ~/.agents/skills/animate
 
-WORKER_PROMPT=$(cat << 'PROMPT_END'
+# Read all library files into variables
+STYLE_GUIDE="$(cat "$SKILL_DIR/library/style-guide.md")"
+POSES="$(cat "$SKILL_DIR/library/poses.md")"
+TRANSITIONS="$(cat "$SKILL_DIR/library/transitions.md")"
+EXPRESSIONS="$(cat "$SKILL_DIR/library/expressions.md")"
+PROPS="$(cat "$SKILL_DIR/library/props.md")"
+ANIMALS="$(cat "$SKILL_DIR/library/animals.md")"
+BASE_TEMPLATE="$(cat "$SKILL_DIR/references/scene-base.html")"
+
+# Read this scene's description from story.json
+SCENE_DESC=$(python3 -c "
+import json
+story = json.load(open('.animate/story.json'))
+scene = story['scenes'][$((N-1))]
+print(json.dumps(scene, indent=2))
+")
+
+# Assemble the prompt with all library contents injected inline
+cat > /tmp/animate-scene-$(printf "%02d" $N)-prompt.txt << PROMPT_EOF
 You are generating a single HTML file for a stick figure animation scene.
 
 ## Scene Specification
-SCENE_DESCRIPTION_HERE
+$SCENE_DESC
 
 ## Component Library
 
-Read and use these reference files for exact SVG data and animation patterns:
-- Style Guide: SKILL_DIR/library/style-guide.md
-- Poses: SKILL_DIR/library/poses.md
-- Transitions: SKILL_DIR/library/transitions.md
-- Expressions: SKILL_DIR/library/expressions.md
-- Props: SKILL_DIR/library/props.md
-- Animals: SKILL_DIR/library/animals.md
+### Style Guide
+$STYLE_GUIDE
+
+### Poses
+$POSES
+
+### Transitions
+$TRANSITIONS
+
+### Expressions
+$EXPRESSIONS
+
+### Props
+$PROPS
+
+### Animals
+$ANIMALS
 
 ## Base Template
-
-Start from this HTML skeleton:
-SKILL_DIR/references/scene-base.html
+$BASE_TEMPLATE
 
 ## Rules
 
 1. Use CSS-only animation (no JavaScript)
-2. All animations loop with `infinite` and duration `8s`
+2. All animations loop with \`infinite\` and duration \`8s\`
 3. Use the relative coordinate system from the style guide
-4. Position characters via `translate()` on parent `<g>` elements
+4. Position characters via \`translate()\` on parent \`<g>\` elements
 5. Match poses and props from the component library exactly
 6. Use the color palette from the style guide
 7. Sub-loops (walk cycle 0.5s, run cycle 0.4s) nest inside the 8s scene loop
@@ -146,24 +181,16 @@ SKILL_DIR/references/scene-base.html
 
 ## Output
 
-Write ONLY the complete HTML file to: .animate/scenes/scene-NN.html
+Write ONLY the complete HTML file to: .animate/scenes/scene-$(printf "%02d" $N).html
 No explanation, no markdown — just the HTML file.
-PROMPT_END
-)
+PROMPT_EOF
 ```
 
-2. Spawn the worker:
+2. Spawn the worker (use the most capable available model for generation):
 
 ```bash
-# Write the assembled prompt to a temp file
-cat > /tmp/animate-scene-$(printf "%02d" $N)-prompt.txt << PROMPT_EOF
-$WORKER_PROMPT
-PROMPT_EOF
-
-# Spawn background worker
 env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
   claude -p --dangerously-skip-permissions \
-  --model claude-opus-4-6 \
   "$(cat /tmp/animate-scene-$(printf "%02d" $N)-prompt.txt)" &
 ```
 
@@ -185,8 +212,6 @@ for N in $(seq 1 $TOTAL_SCENES); do
   echo "✓ $FILE generated"
 done
 ```
-
-**Important:** Each worker prompt must include the full text content of the relevant library files (read them and inject into the prompt). The workers don't have access to the skill directory — they only see what's in their prompt.
 
 ---
 
@@ -223,27 +248,40 @@ agent-browser screenshot ".animate/qc/scene-${N}-kf100.png"
 agent-browser close
 ```
 
-2. **Spawn a Sonnet QC reviewer:**
+2. **Spawn a QC reviewer** (use a fast model — Sonnet-class is sufficient for visual review):
 
 ```bash
-cat > /tmp/animate-qc-$(printf "%02d" $N)-prompt.txt << 'QC_EOF'
+# Read the QC rubric
+QC_RUBRIC="$(cat "$SKILL_DIR/references/qc-rubric.md")"
+
+# Read this scene's description
+SCENE_DESC=$(python3 -c "
+import json
+story = json.load(open('.animate/story.json'))
+scene = story['scenes'][$((N-1))]
+print(json.dumps(scene, indent=2))
+")
+
+cat > /tmp/animate-qc-$(printf "%02d" $N)-prompt.txt << QC_EOF
 Review these 4 keyframe screenshots of a stick figure animation scene against the QC rubric.
 
 Screenshots:
-- .animate/qc/scene-N-kf0.png (0% - start)
-- .animate/qc/scene-N-kf33.png (33%)
-- .animate/qc/scene-N-kf66.png (66%)
-- .animate/qc/scene-N-kf100.png (100% - end)
+- .animate/qc/scene-${N}-kf0.png (0% - start)
+- .animate/qc/scene-${N}-kf33.png (33%)
+- .animate/qc/scene-${N}-kf66.png (66%)
+- .animate/qc/scene-${N}-kf100.png (100% - end)
 
-QC Rubric: [contents of references/qc-rubric.md]
+QC Rubric:
+$QC_RUBRIC
 
-Scene description: [scene description from story.json]
+Scene description:
+$SCENE_DESC
 
 Evaluate each category: Character Integrity, Animation Correctness, Scene Composition, Visual Quality.
 
 Output a JSON object:
 {
-  "scene": N,
+  "scene": $N,
   "overall": "PASS" or "FAIL",
   "categories": {
     "character_integrity": { "result": "PASS/FAIL", "notes": "..." },
@@ -254,12 +292,11 @@ Output a JSON object:
   "fix_instructions": ["list of specific fixes needed"]
 }
 
-Write the result to: .animate/qc/scene-N-result.json
+Write the result to: .animate/qc/scene-${N}-result.json
 QC_EOF
 
 env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
   claude -p --dangerously-skip-permissions \
-  --model claude-sonnet-4-6 \
   "$(cat /tmp/animate-qc-$(printf "%02d" $N)-prompt.txt)"
 ```
 
@@ -281,15 +318,38 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   ITERATION=$((ITERATION + 1))
   echo "⚠ Scene $N failed QC (attempt $ITERATION/$MAX_ITERATIONS). Fixing..."
 
-  # Spawn Opus fix worker
+  # Read current scene HTML
+  CURRENT_HTML="$(cat ".animate/scenes/scene-$(printf "%02d" $N).html")"
+
+  # Spawn fix worker (use the most capable available model)
   cat > /tmp/animate-fix-$(printf "%02d" $N)-prompt.txt << FIX_EOF
 Fix this stick figure animation scene based on QC feedback.
 
-Current HTML: [read .animate/scenes/scene-NN.html]
-QC Result: $QC_RESULT
+Current HTML:
+$CURRENT_HTML
+
+QC Result:
+$QC_RESULT
 
 Component Library:
-[inject library files as context]
+
+### Style Guide
+$STYLE_GUIDE
+
+### Poses
+$POSES
+
+### Transitions
+$TRANSITIONS
+
+### Expressions
+$EXPRESSIONS
+
+### Props
+$PROPS
+
+### Animals
+$ANIMALS
 
 Fix the issues listed in fix_instructions. Write the corrected HTML to:
 .animate/scenes/scene-$(printf "%02d" $N).html
@@ -297,23 +357,23 @@ FIX_EOF
 
   env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
     claude -p --dangerously-skip-permissions \
-    --model claude-opus-4-6 \
     "$(cat /tmp/animate-fix-$(printf "%02d" $N)-prompt.txt)"
 
   # Re-capture and re-review
-  # (repeat keyframe capture + Sonnet review from above)
+  # (repeat keyframe capture + QC review from above)
 done
 ```
 
 4. **Continuity check (multi-scene only):**
 
-For scenes 2+, compare `.animate/qc/scene-${N-1}-kf100.png` with `.animate/qc/scene-${N}-kf0.png`:
+For scenes 2+, compare the last frame of the previous scene with the first frame of the current scene:
 
 ```bash
-cat > /tmp/animate-continuity-prompt.txt << 'CONT_EOF'
+PREV=$((N - 1))
+cat > /tmp/animate-continuity-prompt.txt << CONT_EOF
 Compare these two screenshots for continuity:
-1. .animate/qc/scene-PREV-kf100.png (end of previous scene)
-2. .animate/qc/scene-CURR-kf0.png (start of current scene)
+1. .animate/qc/scene-${PREV}-kf100.png (end of scene $PREV)
+2. .animate/qc/scene-${N}-kf0.png (start of scene $N)
 
 Check:
 - Character position consistency
@@ -322,12 +382,11 @@ Check:
 - Emotional progression
 
 Output: PASS or FAIL with specific fix notes.
-Write to: .animate/qc/continuity-PREV-CURR.json
+Write to: .animate/qc/continuity-${PREV}-${N}.json
 CONT_EOF
 
 env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
   claude -p --dangerously-skip-permissions \
-  --model claude-sonnet-4-6 \
   "$(cat /tmp/animate-continuity-prompt.txt)"
 ```
 
@@ -372,15 +431,15 @@ Output:
 
 ## Component Library Reference
 
-When generating scenes, always read and inject these files into worker prompts:
+When generating scenes, the dispatcher must read these files and inject their full contents into worker prompts:
 
 | File | Purpose |
 |------|---------|
 | `library/style-guide.md` | Coordinate system, proportions, colors, CSS classes |
-| `library/poses.md` | 15 named poses with exact SVG path data |
+| `library/poses.md` | 16 named poses with exact SVG path data |
 | `library/transitions.md` | Animation keyframe patterns (walk, run, sit, jump, etc.) |
-| `library/expressions.md` | 8 facial expressions with SVG data |
-| `library/props.md` | 17 reusable prop SVG snippets |
+| `library/expressions.md` | 9 facial expressions with SVG data |
+| `library/props.md` | Reusable prop SVG snippets |
 | `library/animals.md` | 4 animal templates with walk cycles |
 
 ## Key Conventions
@@ -390,5 +449,5 @@ When generating scenes, always read and inject these files into worker prompts:
 3. **Relative coordinates** — characters defined at origin, positioned via `translate()`.
 4. **Phase-based scenes** — for multi-moment scenes, use opacity toggling (see `transitions.md` → phase_transition).
 5. **Sub-loops** — walk cycle (0.5s), run cycle (0.4s) nest inside the 8s scene loop.
-6. **Opus for generation, Sonnet for QC** — match model capability to task complexity.
+6. **Opus for generation, Sonnet for QC** — use the most capable available model for scene generation, a fast model for QC review.
 7. **Max 3 QC fix iterations** — if still failing after 3, report the remaining issues to the user.
