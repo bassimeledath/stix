@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scene N: Title</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #faf9f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  svg { width: 900px; height: 400px; }
+  .ground { stroke: #d4d0c8; stroke-width: 1.5; stroke-dasharray: 6 4; }
+
+  /* Character base styles */
+  .char-head  { fill: none; stroke: #2a2a2a; stroke-width: 2.4; }
+  .char-body  { stroke: #2a2a2a; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  .char-eyes  { fill: #2a2a2a; }
+  .char-mouth { stroke: #2a2a2a; stroke-width: 1.8; stroke-linecap: round; fill: none; }
+
+  /* === Animation keyframes go here === */
+
+</style>
+</head>
+<body>
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ground line -->
+  <line class="ground" x1="0" y1="355" x2="900" y2="355" />
+
+  <!-- Scene content goes here -->
+
+</svg>
+</body>
+</html>
