@@ -2,9 +2,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_NAME="doodle"
+SKILL_NAME="stix"
 
-echo "🎨 Installing doodle skill..."
+echo "🎨 Installing stix skill..."
 
 # Detect available agents and their skill directories
 INSTALLED=0
@@ -35,9 +35,9 @@ echo "  ✓ Linked to generic agents: $AGENTS_DIR"
 INSTALLED=$((INSTALLED + 1))
 
 echo ""
-echo "✅ doodle installed! ($INSTALLED agent location(s))"
+echo "✅ stix installed! ($INSTALLED agent location(s))"
 echo ""
-echo "Usage:  /doodle \"a cat chasing a mouse across a park\""
+echo "Usage:  /stix \"a cat chasing a mouse across a park\""
 echo ""
 echo "Dependencies: agent-browser, ffmpeg"
-echo "Run 'doodle-skill --check' to verify."
+echo "Run 'stix-skill --check' to verify."

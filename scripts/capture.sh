@@ -3,9 +3,9 @@
 # Usage: ./capture.sh [options]
 #
 # Options:
-#   --scenes-dir DIR    Directory containing scene-*.html files (default: .doodle/scenes)
-#   --frames-dir DIR    Directory to store captured frames (default: .doodle/frames)
-#   --output-dir DIR    Directory for output files (default: .doodle/output)
+#   --scenes-dir DIR    Directory containing scene-*.html files (default: .stix/scenes)
+#   --frames-dir DIR    Directory to store captured frames (default: .stix/frames)
+#   --output-dir DIR    Directory for output files (default: .stix/output)
 #   --fps N             Frames per second for output (default: 8)
 #   --format FORMAT     Output format: gif, mp4, both (default: both)
 #   --width N           Output width in pixels (default: 800)
@@ -13,9 +13,9 @@
 set -e
 
 # Defaults
-SCENES_DIR=".doodle/scenes"
-FRAMES_DIR=".doodle/frames"
-OUTPUT_DIR=".doodle/output"
+SCENES_DIR=".stix/scenes"
+FRAMES_DIR=".stix/frames"
+OUTPUT_DIR=".stix/output"
 FPS=8
 FORMAT="both"
 WIDTH=800
@@ -71,7 +71,7 @@ trap cleanup EXIT
 # Setup frames directory (guard: only remove if it looks like our frames dir)
 if [ -d "$FRAMES_DIR" ]; then
   case "$FRAMES_DIR" in
-    *frames*|*.doodle/*)
+    *frames*|*.stix/*)
       rm -rf "$FRAMES_DIR"
       ;;
     *)
@@ -174,7 +174,7 @@ fi
 # Clean up frames (guarded)
 if [ -d "$FRAMES_DIR" ]; then
   case "$FRAMES_DIR" in
-    *frames*|*.doodle/*)
+    *frames*|*.stix/*)
       rm -rf "$FRAMES_DIR"
       ;;
   esac

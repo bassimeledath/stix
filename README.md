@@ -1,54 +1,54 @@
-# /doodle
+# /stix
 
 A coding-agent skill that generates stick figure animations from natural language prompts.
 
 ```
-/doodle "a person waving hello"
+/stix "a person waving hello"
 ```
 
-Outputs: `.doodle/output/animation.gif` + `.doodle/output/animation.mp4`
+Outputs: `.stix/output/animation.gif` + `.stix/output/animation.mp4`
 
 ## Installation
 
 ### Via npx skills (recommended)
 ```bash
-npx skills add bassimeledath/doodle
+npx skills add bassimeledath/stix
 ```
 
 ### Via npm
 ```bash
-npx @bassimeledath/doodle
+npx @bassimeledath/stix
 ```
 
 ### Manual
 ```bash
 # Claude Code
-git clone https://github.com/bassimeledath/doodle ~/.claude/skills/doodle
+git clone https://github.com/bassimeledath/stix ~/.claude/skills/stix
 
 # Codex
-git clone https://github.com/bassimeledath/doodle ~/.codex/skills/doodle
+git clone https://github.com/bassimeledath/stix ~/.codex/skills/stix
 
 # Other agents
-git clone https://github.com/bassimeledath/doodle ~/.agents/skills/doodle
+git clone https://github.com/bassimeledath/stix ~/.agents/skills/stix
 ```
 
 ## Dependencies
 
-- A supported AI coding agent CLI (`claude`, `codex`, or set `DOODLE_AGENT_CLI`)
+- A supported AI coding agent CLI (`claude`, `codex`, or set `STIX_AGENT_CLI`)
 - [agent-browser](https://github.com/anthropics/agent-browser) — headless browser for screenshot capture
 - [ffmpeg](https://ffmpeg.org/) — frame stitching
 
 ## Agent Configuration
 
-doodle auto-detects your agent CLI. Override with:
+stix auto-detects your agent CLI. Override with:
 
 ```bash
 # Use a specific agent
-export DOODLE_AGENT_CLI="codex --quiet --full-auto"
+export STIX_AGENT_CLI="codex --quiet --full-auto"
 
 # Custom agent with env vars to unset
-export DOODLE_AGENT_CLI="my-agent --pipe"
-export DOODLE_AGENT_ENV_UNSET="MY_AGENT_PARENT_SESSION"
+export STIX_AGENT_CLI="my-agent --pipe"
+export STIX_AGENT_ENV_UNSET="MY_AGENT_PARENT_SESSION"
 ```
 
 ## How It Works
@@ -63,18 +63,18 @@ export DOODLE_AGENT_ENV_UNSET="MY_AGENT_PARENT_SESSION"
 
 ```
 # Simple (1 scene)
-/doodle "a person waving hello"
+/stix "a person waving hello"
 
 # Medium (2-3 scenes)
-/doodle "a cat chasing a mouse across a park"
+/stix "a cat chasing a mouse across a park"
 
 # Complex (3-4 scenes)
-/doodle "a person sitting sadly, then going to the gym, then walking confidently"
+/stix "a person sitting sadly, then going to the gym, then walking confidently"
 ```
 
 ## Output
 
-Files are written to `.doodle/output/` in the current working directory:
+Files are written to `.stix/output/` in the current working directory:
 
 | File | Format | Typical Size |
 |------|--------|-------------|
@@ -94,7 +94,7 @@ The skill includes a curated library of SVG components:
 ## Architecture
 
 ```
-/doodle prompt
+/stix prompt
     │
     ├─ Step 1: Infer parameters (scenes, fps, mood)
     ├─ Step 2: Preflight checks (agent-browser, ffmpeg, agent CLI)

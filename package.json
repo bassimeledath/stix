@@ -1,5 +1,5 @@
 {
-  "name": "@bassimeledath/doodle",
+  "name": "@bassimeledath/stix",
   "version": "1.0.0",
   "description": "Stick figure animation skill for AI coding agents — generate GIF/MP4 animations from natural language prompts",
   "keywords": [
@@ -8,7 +8,7 @@
     "agent-skill",
     "animation",
     "stick-figure",
-    "doodle",
+    "stix",
     "codex",
     "cursor",
     "ai-coding"
@@ -17,11 +17,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bassimeledath/doodle"
+    "url": "https://github.com/bassimeledath/stix"
   },
-  "homepage": "https://github.com/bassimeledath/doodle#readme",
+  "homepage": "https://github.com/bassimeledath/stix#readme",
   "bin": {
-    "doodle-skill": "./bin/install.sh"
+    "stix-skill": "./bin/install.sh"
   },
   "scripts": {
     "postinstall": "node bin/postinstall.js"
