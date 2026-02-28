@@ -1,16 +1,22 @@
-# /animate — Stick Figure Animation
+---
+name: doodle
+description: Generate stick figure animations from natural language descriptions. Outputs GIF and MP4.
+disable-model-invocation: true
+---
+
+# /doodle — Stick Figure Animation
 
 Generate stick figure animations from natural language descriptions. Outputs GIF and MP4 files.
 
 ## Usage
 
 ```
-/animate "a cat chasing a mouse across a park"
+/doodle "a cat chasing a mouse across a park"
 ```
 
 ## Pipeline
 
-When the user invokes `/animate`, execute these steps in order:
+When the user invokes `/doodle`, execute these steps in order:
 
 ---
 
@@ -27,7 +33,7 @@ Parse the user's prompt and infer these parameters. The user never sees or sets 
 
 Each scene is always **8 seconds** (the animation system is built around this fixed duration).
 
-Write these to `.animate/params.json`:
+Write these to `.doodle/params.json`:
 
 ```json
 {
@@ -48,21 +54,38 @@ Verify dependencies are installed:
 ```bash
 command -v agent-browser >/dev/null 2>&1 || { echo "❌ agent-browser not found"; exit 1; }
 command -v ffmpeg >/dev/null 2>&1 || { echo "❌ ffmpeg not found"; exit 1; }
-command -v claude >/dev/null 2>&1 || { echo "❌ claude CLI not found"; exit 1; }
+
+# Detect agent CLI (configurable via DOODLE_AGENT_CLI env var)
+DOODLE_AGENT_CLI="${DOODLE_AGENT_CLI:-}"
+if [ -z "$DOODLE_AGENT_CLI" ]; then
+  if command -v claude >/dev/null 2>&1; then
+    DOODLE_AGENT_CLI="claude -p --dangerously-skip-permissions"
+    DOODLE_AGENT_ENV_UNSET="CLAUDE_CODE_ENTRYPOINT,CLAUDECODE"
+  elif command -v codex >/dev/null 2>&1; then
+    DOODLE_AGENT_CLI="codex --quiet --full-auto"
+    DOODLE_AGENT_ENV_UNSET=""
+  else
+    echo "❌ No supported agent CLI found. Set DOODLE_AGENT_CLI env var."
+    echo "   Supported: claude, codex. Or set DOODLE_AGENT_CLI to your agent's pipe command."
+    exit 1
+  fi
+fi
+AGENT_BIN=$(echo "$DOODLE_AGENT_CLI" | awk '{print $1}')
+command -v "$AGENT_BIN" >/dev/null 2>&1 || { echo "❌ Agent CLI '$AGENT_BIN' not found"; exit 1; }
 ```
 
 Create the working directory:
 
 ```bash
-rm -rf .animate
-mkdir -p .animate/scenes .animate/qc .animate/output
+rm -rf .doodle
+mkdir -p .doodle/scenes .doodle/qc .doodle/output
 ```
 
 ---
 
 ### Step 3: Story Decomposition
 
-Break the prompt into scenes. Write `.animate/story.json`:
+Break the prompt into scenes. Write `.doodle/story.json`:
 
 ```json
 {
@@ -102,15 +125,15 @@ Break the prompt into scenes. Write `.animate/story.json`:
 
 ### Step 4: Scene Generation (Parallel Workers)
 
-For each scene, spawn a background worker using the Claude CLI. All workers run in parallel.
+For each scene, spawn a background worker using the agent CLI. All workers run in parallel.
 
 **Read the scene count from story.json:**
 
 ```bash
-TOTAL_SCENES=$(python3 -c "import json; print(len(json.load(open('.animate/story.json'))['scenes']))")
+TOTAL_SCENES=$(python3 -c "import json; print(len(json.load(open('.doodle/story.json'))['scenes']))")
 ```
 
-**The dispatcher must read and inject all library file contents into each worker prompt.** Workers run as independent `claude -p` subprocesses and cannot access the skill directory. The dispatcher is responsible for assembling the full prompt with all necessary context inline.
+**The dispatcher must read and inject all library file contents into each worker prompt.** Workers run as independent agent subprocesses and cannot access the skill directory. The dispatcher is responsible for assembling the full prompt with all necessary context inline.
 
 **For each scene N:**
 
@@ -119,7 +142,7 @@ TOTAL_SCENES=$(python3 -c "import json; print(len(json.load(open('.animate/story
 ```bash
 SKILL_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || cd "$(dirname "$0")" && pwd)"
 # If SKILL_DIR detection fails, try common install locations:
-# ~/.claude/skills/animate or ~/.agents/skills/animate
+# ~/.claude/skills/doodle, ~/.codex/skills/doodle, or ~/.agents/skills/doodle
 
 # Read all library files into variables
 STYLE_GUIDE="$(cat "$SKILL_DIR/library/style-guide.md")"
@@ -133,13 +156,13 @@ BASE_TEMPLATE="$(cat "$SKILL_DIR/references/scene-base.html")"
 # Read this scene's description from story.json
 SCENE_DESC=$(python3 -c "
 import json
-story = json.load(open('.animate/story.json'))
+story = json.load(open('.doodle/story.json'))
 scene = story['scenes'][$((N-1))]
 print(json.dumps(scene, indent=2))
 ")
 
 # Assemble the prompt with all library contents injected inline
-cat > /tmp/animate-scene-$(printf "%02d" $N)-prompt.txt << PROMPT_EOF
+cat > /tmp/doodle-scene-$(printf "%02d" $N)-prompt.txt << PROMPT_EOF
 You are generating a single HTML file for a stick figure animation scene.
 
 ## Scene Specification
@@ -181,7 +204,7 @@ $BASE_TEMPLATE
 
 ## Output
 
-Write ONLY the complete HTML file to: .animate/scenes/scene-$(printf "%02d" $N).html
+Write ONLY the complete HTML file to: .doodle/scenes/scene-$(printf "%02d" $N).html
 No explanation, no markdown — just the HTML file.
 PROMPT_EOF
 ```
@@ -189,9 +212,17 @@ PROMPT_EOF
 2. Spawn the worker (use the most capable available model for generation):
 
 ```bash
-env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
-  claude -p --dangerously-skip-permissions \
-  "$(cat /tmp/animate-scene-$(printf "%02d" $N)-prompt.txt)" &
+# Build env unset command
+ENV_CMD="env"
+if [ -n "$DOODLE_AGENT_ENV_UNSET" ]; then
+  IFS=',' read -ra UNSET_VARS <<< "$DOODLE_AGENT_ENV_UNSET"
+  for var in "${UNSET_VARS[@]}"; do
+    [ -n "$var" ] && ENV_CMD="$ENV_CMD -u $var"
+  done
+fi
+
+$ENV_CMD $DOODLE_AGENT_CLI \
+  "$(cat /tmp/doodle-scene-$(printf "%02d" $N)-prompt.txt)" &
 ```
 
 3. After spawning all workers, wait for completion:
@@ -204,7 +235,7 @@ wait
 
 ```bash
 for N in $(seq 1 $TOTAL_SCENES); do
-  FILE=".animate/scenes/scene-$(printf "%02d" $N).html"
+  FILE=".doodle/scenes/scene-$(printf "%02d" $N).html"
   if [ ! -f "$FILE" ]; then
     echo "❌ Missing: $FILE"
     exit 1
@@ -224,31 +255,31 @@ For each scene, perform quality checks using screenshots and a review worker.
 1. **Capture 4 keyframes:**
 
 ```bash
-SCENE_FILE=".animate/scenes/scene-$(printf "%02d" $N).html"
+SCENE_FILE=".doodle/scenes/scene-$(printf "%02d" $N).html"
 ABS_PATH="$(cd "$(dirname "$SCENE_FILE")" && pwd)/$(basename "$SCENE_FILE")"
 
 agent-browser open "file://$ABS_PATH"
 sleep 0.5
 
 # Keyframe at 0%
-agent-browser screenshot ".animate/qc/scene-${N}-kf0.png"
+agent-browser screenshot ".doodle/qc/scene-${N}-kf0.png"
 
 # Keyframe at 33% (sleep 2.64s into 8s loop)
 sleep 2.64
-agent-browser screenshot ".animate/qc/scene-${N}-kf33.png"
+agent-browser screenshot ".doodle/qc/scene-${N}-kf33.png"
 
 # Keyframe at 66%
 sleep 2.64
-agent-browser screenshot ".animate/qc/scene-${N}-kf66.png"
+agent-browser screenshot ".doodle/qc/scene-${N}-kf66.png"
 
 # Keyframe at 100%
 sleep 2.64
-agent-browser screenshot ".animate/qc/scene-${N}-kf100.png"
+agent-browser screenshot ".doodle/qc/scene-${N}-kf100.png"
 
 agent-browser close
 ```
 
-2. **Spawn a QC reviewer** (use a fast model — Sonnet-class is sufficient for visual review):
+2. **Spawn a QC reviewer** (use a fast model — review-tier is sufficient for visual review):
 
 ```bash
 # Read the QC rubric
@@ -257,19 +288,19 @@ QC_RUBRIC="$(cat "$SKILL_DIR/references/qc-rubric.md")"
 # Read this scene's description
 SCENE_DESC=$(python3 -c "
 import json
-story = json.load(open('.animate/story.json'))
+story = json.load(open('.doodle/story.json'))
 scene = story['scenes'][$((N-1))]
 print(json.dumps(scene, indent=2))
 ")
 
-cat > /tmp/animate-qc-$(printf "%02d" $N)-prompt.txt << QC_EOF
+cat > /tmp/doodle-qc-$(printf "%02d" $N)-prompt.txt << QC_EOF
 Review these 4 keyframe screenshots of a stick figure animation scene against the QC rubric.
 
 Screenshots:
-- .animate/qc/scene-${N}-kf0.png (0% - start)
-- .animate/qc/scene-${N}-kf33.png (33%)
-- .animate/qc/scene-${N}-kf66.png (66%)
-- .animate/qc/scene-${N}-kf100.png (100% - end)
+- .doodle/qc/scene-${N}-kf0.png (0% - start)
+- .doodle/qc/scene-${N}-kf33.png (33%)
+- .doodle/qc/scene-${N}-kf66.png (66%)
+- .doodle/qc/scene-${N}-kf100.png (100% - end)
 
 QC Rubric:
 $QC_RUBRIC
@@ -292,12 +323,20 @@ Output a JSON object:
   "fix_instructions": ["list of specific fixes needed"]
 }
 
-Write the result to: .animate/qc/scene-${N}-result.json
+Write the result to: .doodle/qc/scene-${N}-result.json
 QC_EOF
 
-env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
-  claude -p --dangerously-skip-permissions \
-  "$(cat /tmp/animate-qc-$(printf "%02d" $N)-prompt.txt)"
+# Build env unset command
+ENV_CMD="env"
+if [ -n "$DOODLE_AGENT_ENV_UNSET" ]; then
+  IFS=',' read -ra UNSET_VARS <<< "$DOODLE_AGENT_ENV_UNSET"
+  for var in "${UNSET_VARS[@]}"; do
+    [ -n "$var" ] && ENV_CMD="$ENV_CMD -u $var"
+  done
+fi
+
+$ENV_CMD $DOODLE_AGENT_CLI \
+  "$(cat /tmp/doodle-qc-$(printf "%02d" $N)-prompt.txt)"
 ```
 
 3. **If FAIL, fix and re-review (max 3 iterations):**
@@ -308,7 +347,7 @@ MAX_ITERATIONS=3
 
 while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   # Read QC result
-  QC_RESULT=$(cat ".animate/qc/scene-${N}-result.json" 2>/dev/null)
+  QC_RESULT=$(cat ".doodle/qc/scene-${N}-result.json" 2>/dev/null)
 
   if echo "$QC_RESULT" | grep -q '"overall": "PASS"'; then
     echo "✓ Scene $N passed QC"
@@ -319,10 +358,10 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   echo "⚠ Scene $N failed QC (attempt $ITERATION/$MAX_ITERATIONS). Fixing..."
 
   # Read current scene HTML
-  CURRENT_HTML="$(cat ".animate/scenes/scene-$(printf "%02d" $N).html")"
+  CURRENT_HTML="$(cat ".doodle/scenes/scene-$(printf "%02d" $N).html")"
 
   # Spawn fix worker (use the most capable available model)
-  cat > /tmp/animate-fix-$(printf "%02d" $N)-prompt.txt << FIX_EOF
+  cat > /tmp/doodle-fix-$(printf "%02d" $N)-prompt.txt << FIX_EOF
 Fix this stick figure animation scene based on QC feedback.
 
 Current HTML:
@@ -352,12 +391,20 @@ $PROPS
 $ANIMALS
 
 Fix the issues listed in fix_instructions. Write the corrected HTML to:
-.animate/scenes/scene-$(printf "%02d" $N).html
+.doodle/scenes/scene-$(printf "%02d" $N).html
 FIX_EOF
 
-  env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
-    claude -p --dangerously-skip-permissions \
-    "$(cat /tmp/animate-fix-$(printf "%02d" $N)-prompt.txt)"
+  # Build env unset command
+  ENV_CMD="env"
+  if [ -n "$DOODLE_AGENT_ENV_UNSET" ]; then
+    IFS=',' read -ra UNSET_VARS <<< "$DOODLE_AGENT_ENV_UNSET"
+    for var in "${UNSET_VARS[@]}"; do
+      [ -n "$var" ] && ENV_CMD="$ENV_CMD -u $var"
+    done
+  fi
+
+  $ENV_CMD $DOODLE_AGENT_CLI \
+    "$(cat /tmp/doodle-fix-$(printf "%02d" $N)-prompt.txt)"
 
   # Re-capture and re-review
   # (repeat keyframe capture + QC review from above)
@@ -370,10 +417,10 @@ For scenes 2+, compare the last frame of the previous scene with the first frame
 
 ```bash
 PREV=$((N - 1))
-cat > /tmp/animate-continuity-prompt.txt << CONT_EOF
+cat > /tmp/doodle-continuity-prompt.txt << CONT_EOF
 Compare these two screenshots for continuity:
-1. .animate/qc/scene-${PREV}-kf100.png (end of scene $PREV)
-2. .animate/qc/scene-${N}-kf0.png (start of scene $N)
+1. .doodle/qc/scene-${PREV}-kf100.png (end of scene $PREV)
+2. .doodle/qc/scene-${N}-kf0.png (start of scene $N)
 
 Check:
 - Character position consistency
@@ -382,12 +429,20 @@ Check:
 - Emotional progression
 
 Output: PASS or FAIL with specific fix notes.
-Write to: .animate/qc/continuity-${PREV}-${N}.json
+Write to: .doodle/qc/continuity-${PREV}-${N}.json
 CONT_EOF
 
-env -u CLAUDE_CODE_ENTRYPOINT -u CLAUDECODE \
-  claude -p --dangerously-skip-permissions \
-  "$(cat /tmp/animate-continuity-prompt.txt)"
+# Build env unset command
+ENV_CMD="env"
+if [ -n "$DOODLE_AGENT_ENV_UNSET" ]; then
+  IFS=',' read -ra UNSET_VARS <<< "$DOODLE_AGENT_ENV_UNSET"
+  for var in "${UNSET_VARS[@]}"; do
+    [ -n "$var" ] && ENV_CMD="$ENV_CMD -u $var"
+  done
+fi
+
+$ENV_CMD $DOODLE_AGENT_CLI \
+  "$(cat /tmp/doodle-continuity-prompt.txt)"
 ```
 
 ---
@@ -400,9 +455,9 @@ Run the capture script with inferred parameters:
 SKILL_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || cd "$(dirname "$0")" && pwd)"
 
 bash "$SKILL_DIR/scripts/capture.sh" \
-  --scenes-dir .animate/scenes \
-  --frames-dir .animate/frames \
-  --output-dir .animate/output \
+  --scenes-dir .doodle/scenes \
+  --frames-dir .doodle/frames \
+  --output-dir .doodle/output \
   --fps $FPS \
   --format $FORMAT
 ```
@@ -423,8 +478,8 @@ FPS: 8
 QC: All scenes passed (2 required fixes)
 
 Output:
-  GIF: .animate/output/animation.gif (270KB)
-  MP4: .animate/output/animation.mp4 (90KB)
+  GIF: .doodle/output/animation.gif (270KB)
+  MP4: .doodle/output/animation.mp4 (90KB)
 ```
 
 ---
@@ -449,5 +504,5 @@ When generating scenes, the dispatcher must read these files and inject their fu
 3. **Relative coordinates** — characters defined at origin, positioned via `translate()`.
 4. **Phase-based scenes** — for multi-moment scenes, use opacity toggling (see `transitions.md` → phase_transition).
 5. **Sub-loops** — walk cycle (0.5s), run cycle (0.4s) nest inside the 8s scene loop.
-6. **Opus for generation, Sonnet for QC** — use the most capable available model for scene generation, a fast model for QC review.
+6. **Generation tier for creation, review tier for QC** — use your agent's most capable model for scene generation, the fastest capable model for QC review. The agent CLI handles model selection.
 7. **Max 3 QC fix iterations** — if still failing after 3, report the remaining issues to the user.

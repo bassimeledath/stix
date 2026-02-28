@@ -1,49 +1,80 @@
-# /animate
+# /doodle
 
-A Claude Code skill that generates stick figure animations from natural language prompts.
+A coding-agent skill that generates stick figure animations from natural language prompts.
 
 ```
-/animate "a person waving hello"
+/doodle "a person waving hello"
 ```
 
-Outputs: `.animate/output/animation.gif` + `.animate/output/animation.mp4`
+Outputs: `.doodle/output/animation.gif` + `.doodle/output/animation.mp4`
 
 ## Installation
 
+### Via npx skills (recommended)
 ```bash
-git clone https://github.com/bassimeledath/animate ~/.claude/skills/animate
+npx skills add bassimeledath/doodle
+```
+
+### Via npm
+```bash
+npx @bassimeledath/doodle
+```
+
+### Manual
+```bash
+# Claude Code
+git clone https://github.com/bassimeledath/doodle ~/.claude/skills/doodle
+
+# Codex
+git clone https://github.com/bassimeledath/doodle ~/.codex/skills/doodle
+
+# Other agents
+git clone https://github.com/bassimeledath/doodle ~/.agents/skills/doodle
 ```
 
 ## Dependencies
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (with `claude` CLI)
+- A supported AI coding agent CLI (`claude`, `codex`, or set `DOODLE_AGENT_CLI`)
 - [agent-browser](https://github.com/anthropics/agent-browser) — headless browser for screenshot capture
 - [ffmpeg](https://ffmpeg.org/) — frame stitching
+
+## Agent Configuration
+
+doodle auto-detects your agent CLI. Override with:
+
+```bash
+# Use a specific agent
+export DOODLE_AGENT_CLI="codex --quiet --full-auto"
+
+# Custom agent with env vars to unset
+export DOODLE_AGENT_CLI="my-agent --pipe"
+export DOODLE_AGENT_ENV_UNSET="MY_AGENT_PARENT_SESSION"
+```
 
 ## How It Works
 
 1. **Parameter inference** — parses your prompt to determine scene count, mood, FPS
 2. **Story decomposition** — breaks the prompt into scenes with characters, poses, and props
-3. **Parallel scene generation** — spawns Opus workers to generate HTML/CSS animations
-4. **Visual QC** — captures keyframe screenshots, Sonnet reviews against a rubric, auto-fixes failures
+3. **Parallel scene generation** — spawns generation-tier workers to create HTML/CSS animations
+4. **Visual QC** — captures keyframe screenshots, review-tier workers check against a rubric, auto-fixes failures
 5. **Frame capture + stitch** — `agent-browser` captures frames, `ffmpeg` stitches into GIF/MP4
 
 ## Examples
 
 ```
 # Simple (1 scene)
-/animate "a person waving hello"
+/doodle "a person waving hello"
 
 # Medium (2-3 scenes)
-/animate "a cat chasing a mouse across a park"
+/doodle "a cat chasing a mouse across a park"
 
 # Complex (3-4 scenes)
-/animate "a person sitting sadly, then going to the gym, then walking confidently"
+/doodle "a person sitting sadly, then going to the gym, then walking confidently"
 ```
 
 ## Output
 
-Files are written to `.animate/output/` in the current working directory:
+Files are written to `.doodle/output/` in the current working directory:
 
 | File | Format | Typical Size |
 |------|--------|-------------|
@@ -63,13 +94,13 @@ The skill includes a curated library of SVG components:
 ## Architecture
 
 ```
-/animate prompt
+/doodle prompt
     │
     ├─ Step 1: Infer parameters (scenes, fps, mood)
-    ├─ Step 2: Preflight checks (agent-browser, ffmpeg, claude)
+    ├─ Step 2: Preflight checks (agent-browser, ffmpeg, agent CLI)
     ├─ Step 3: Decompose into scenes → story.json
-    ├─ Step 4: Generate scenes (parallel Opus workers)
-    ├─ Step 5: QC loop (Sonnet review → Opus fix, max 3 iterations)
+    ├─ Step 4: Generate scenes (parallel generation-tier workers)
+    ├─ Step 5: QC loop (review-tier → generation-tier fix, max 3 iterations)
     ├─ Step 6: Capture frames → stitch with ffmpeg
     └─ Step 7: Report output paths
 ```
