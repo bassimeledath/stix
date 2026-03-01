@@ -53,11 +53,15 @@ export STIX_AGENT_ENV_UNSET="MY_AGENT_PARENT_SESSION"
 
 ## How It Works
 
+stix uses an **asset-first pipeline** inspired by animation studios: characters, backgrounds, and props are generated as reusable SVG assets upfront, then scenes are composed by positioning and animating those shared assets. This guarantees visual consistency across scenes.
+
 1. **Parameter inference** — parses your prompt to determine scene count, mood, FPS
-2. **Story decomposition** — breaks the prompt into scenes with characters, poses, and props
-3. **Parallel scene generation** — spawns generation-tier workers to create HTML/CSS animations
-4. **Visual QC** — captures keyframe screenshots, review-tier workers check against a rubric, auto-fixes failures
-5. **Frame capture + stitch** — `agent-browser` captures frames, `ffmpeg` stitches into GIF/MP4
+2. **Story decomposition** — breaks the prompt into scenes with an asset manifest and per-scene position contracts
+3. **Asset generation** — parallel workers create reusable SVG assets (characters, background, props)
+4. **Asset validation** — each asset is rendered and screenshotted for visual inspection
+5. **Scene composition** — parallel workers read shared assets, position them with `translate()`, and add CSS `@keyframes`
+6. **Visual QC** — eval-based keyframe capture, review-tier workers check against a rubric, auto-fixes failures
+7. **Frame capture + stitch** — `agent-browser eval` seeks to exact frame positions, `ffmpeg` stitches into GIF/MP4
 
 ## Examples
 
@@ -95,12 +99,19 @@ The skill includes a curated library of SVG components:
 
 ```
 /stix prompt
-    │
-    ├─ Step 1: Infer parameters (scenes, fps, mood)
-    ├─ Step 2: Preflight checks (agent-browser, ffmpeg, agent CLI)
-    ├─ Step 3: Decompose into scenes → story.json
-    ├─ Step 4: Generate scenes (parallel generation-tier workers)
-    ├─ Step 5: QC loop (review-tier → generation-tier fix, max 3 iterations)
-    ├─ Step 6: Capture frames → stitch with ffmpeg
-    └─ Step 7: Report output paths
+    |
+    |- Step 1: Infer parameters (scenes, fps, mood)
+    |- Step 2: Preflight checks (agent-browser, ffmpeg, agent CLI)
+    |- Step 3: Decompose into scenes + asset manifest -> story.json
+    |
+    |- Step 4: Generate assets (parallel workers)
+    |   |- Characters -> .stix/assets/characters/*.svg
+    |   |- Background -> .stix/assets/background.svg
+    |   '- Props -> .stix/assets/props/*.svg
+    |
+    |- Step 5: Validate assets (render + screenshot each)
+    |- Step 6: Compose scenes (parallel workers read shared assets)
+    |- Step 7: QC loop (eval-based keyframe capture, review + fix)
+    |- Step 8: Capture frames (eval seek + screenshot) + stitch with ffmpeg
+    '- Step 9: Report output paths
 ```

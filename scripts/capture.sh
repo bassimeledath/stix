@@ -1,5 +1,7 @@
 #!/bin/bash
 # Capture animated HTML scenes and stitch into GIF + MP4
+# Uses agent-browser eval to pause CSS animations and seek to exact frame positions.
+#
 # Usage: ./capture.sh [options]
 #
 # Options:
@@ -59,7 +61,7 @@ fi
 command -v agent-browser >/dev/null 2>&1 || { echo "Error: agent-browser not found. Install it first."; exit 1; }
 command -v ffmpeg >/dev/null 2>&1 || { echo "Error: ffmpeg not found. Install it first."; exit 1; }
 
-# Cleanup trap: ensure browser is closed and temp frames cleaned on failure
+# Cleanup trap: ensure browser is closed on failure
 BROWSER_OPEN=false
 cleanup() {
   if $BROWSER_OPEN; then
@@ -98,52 +100,61 @@ fi
 
 echo "Found ${#SCENE_FILES[@]} scene(s)"
 
-# Calculate frames per scene: fps × 8 seconds per scene
+# Calculate frames per scene: fps x 8 seconds per scene
 FRAMES_PER_SCENE=$((FPS * 8))
-# Frame interval using pure bash integer arithmetic (microsecond precision)
-# 1/FPS in seconds, computed as integer division for sleep
-SLEEP_INTERVAL=$(awk "BEGIN { printf \"%.4f\", 1/$FPS }")
+# Scene duration in milliseconds
+SCENE_DURATION_MS=8000
 
-GLOBAL_FRAME=1
+GLOBAL_FRAME=0
 
 for scene_file in "${SCENE_FILES[@]}"; do
   scene_name=$(basename "$scene_file" .html)
-  echo "→ Capturing $scene_name..."
+  echo "Capturing $scene_name..."
 
-  # Open the scene in browser
+  # Open the scene in browser using absolute path
   abs_path="$(cd "$(dirname "$scene_file")" && pwd)/$(basename "$scene_file")"
   agent-browser open "file://$abs_path"
   BROWSER_OPEN=true
-  sleep 1  # let CSS animations initialize
+  sleep 0.5  # page load only
 
-  for i in $(seq 1 $FRAMES_PER_SCENE); do
+  # Pause all CSS animations at the start
+  agent-browser eval "document.getAnimations().forEach(a => a.pause())"
+
+  for i in $(seq 0 $((FRAMES_PER_SCENE - 1))); do
+    # Calculate exact millisecond position for this frame
+    TIME_MS=$(( i * SCENE_DURATION_MS / FRAMES_PER_SCENE ))
     PADDED=$(printf "%04d" $GLOBAL_FRAME)
-    agent-browser screenshot "$FRAMES_DIR/frame-${PADDED}.png" 2>/dev/null
-    sleep "$SLEEP_INTERVAL"
+
+    # Seek all animations to exact millisecond
+    agent-browser eval "document.getAnimations().forEach(a => { a.currentTime = $TIME_MS })"
+
+    # Screenshot with absolute path (avoids CSS selector parsing bug)
+    agent-browser screenshot "$(cd "$FRAMES_DIR" && pwd)/frame-${PADDED}.png"
+
     GLOBAL_FRAME=$((GLOBAL_FRAME + 1))
   done
 
   agent-browser close
   BROWSER_OPEN=false
-  echo "  ✓ $scene_name captured ($FRAMES_PER_SCENE frames)"
+  echo "  $scene_name captured ($FRAMES_PER_SCENE frames)"
 done
 
-TOTAL=$((GLOBAL_FRAME - 1))
+TOTAL=$GLOBAL_FRAME
 echo ""
-echo "→ Captured $TOTAL total frames across ${#SCENE_FILES[@]} scene(s)"
+echo "Captured $TOTAL total frames across ${#SCENE_FILES[@]} scene(s)"
 
 # Stitch into GIF
 if [[ "$FORMAT" == "gif" || "$FORMAT" == "both" ]]; then
-  echo "→ Creating GIF..."
+  echo "Creating GIF..."
   FFMPEG_LOG=$(mktemp)
-  if ffmpeg -y -framerate "$FPS" -start_number 1 -i "$FRAMES_DIR/frame-%04d.png" \
+  if ffmpeg -y -framerate "$FPS" -start_number 0 -i "$FRAMES_DIR/frame-%04d.png" \
     -filter_complex "[0:v] scale=${WIDTH}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=196:stats_mode=diff[p];[b][p]paletteuse=dither=floyd_steinberg" \
     -loop 0 \
     "$OUTPUT_DIR/animation.gif" 2>"$FFMPEG_LOG"; then
     GIF_SIZE=$(du -h "$OUTPUT_DIR/animation.gif" | cut -f1)
-    echo "  ✓ GIF: $OUTPUT_DIR/animation.gif ($GIF_SIZE)"
+    echo "  GIF: $OUTPUT_DIR/animation.gif ($GIF_SIZE)"
   else
-    echo "  ❌ GIF encoding failed. ffmpeg output:"
+    echo "  GIF encoding failed. ffmpeg output:"
     cat "$FFMPEG_LOG"
     rm -f "$FFMPEG_LOG"
     exit 1
@@ -153,17 +164,17 @@ fi
 
 # Create MP4
 if [[ "$FORMAT" == "mp4" || "$FORMAT" == "both" ]]; then
-  echo "→ Creating MP4..."
+  echo "Creating MP4..."
   FFMPEG_LOG=$(mktemp)
-  if ffmpeg -y -framerate "$FPS" -start_number 1 -i "$FRAMES_DIR/frame-%04d.png" \
+  if ffmpeg -y -framerate "$FPS" -start_number 0 -i "$FRAMES_DIR/frame-%04d.png" \
     -vf "scale=${WIDTH}:-2:flags=lanczos" \
     -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p \
     -movflags +faststart \
     "$OUTPUT_DIR/animation.mp4" 2>"$FFMPEG_LOG"; then
     MP4_SIZE=$(du -h "$OUTPUT_DIR/animation.mp4" | cut -f1)
-    echo "  ✓ MP4: $OUTPUT_DIR/animation.mp4 ($MP4_SIZE)"
+    echo "  MP4: $OUTPUT_DIR/animation.mp4 ($MP4_SIZE)"
   else
-    echo "  ❌ MP4 encoding failed. ffmpeg output:"
+    echo "  MP4 encoding failed. ffmpeg output:"
     cat "$FFMPEG_LOG"
     rm -f "$FFMPEG_LOG"
     exit 1
@@ -181,7 +192,7 @@ if [ -d "$FRAMES_DIR" ]; then
 fi
 
 echo ""
-echo "✅ Animation complete!"
+echo "Animation complete!"
 echo "   Scenes: ${#SCENE_FILES[@]}"
 echo "   Frames: $TOTAL"
 echo "   FPS: $FPS"

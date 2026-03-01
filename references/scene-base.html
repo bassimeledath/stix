@@ -23,16 +23,54 @@
   .char-eyes  { fill: #2a2a2a; }
   .char-mouth { stroke: #2a2a2a; stroke-width: 1.8; stroke-linecap: round; fill: none; }
 
-  /* === Animation keyframes go here === */
+  /* Expression toggling: hide all expressions by default, show active one */
+  [class^="expr-"] { display: none; }
+  .expr-active { display: block; }
+
+  /* === Scene-specific keyframes below === */
+
+  /* Example: character translation across stage
+  @keyframes move-character-name {
+    0%   { transform: translate(START_X px, START_Y px); }
+    100% { transform: translate(END_X px, END_Y px); }
+  }
+  */
+
+  /* Example: expression change at midpoint
+  @keyframes expr-toggle-character-name {
+    0%, 49%  { }
+    50%, 100% { }
+  }
+  */
 
 </style>
 </head>
 <body>
 <svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background asset (copied from .stix/assets/background.svg) -->
+  <g id="background">
+    <!-- paste background SVG content here -->
+  </g>
+
   <!-- Ground line -->
   <line class="ground" x1="0" y1="355" x2="900" y2="355" />
 
-  <!-- Scene content goes here -->
+  <!-- Props (copied from .stix/assets/props/*.svg, positioned via translate) -->
+  <!--
+  <g id="prop-NAME" transform="translate(X, Y)">
+    paste prop SVG content here
+  </g>
+  -->
+
+  <!-- Characters (copied from .stix/assets/characters/*.svg, positioned via translate) -->
+  <!--
+  <g id="char-NAME-wrapper" style="animation: move-NAME 8s ease-in-out infinite;">
+    <g id="char-NAME">
+      paste character SVG content here
+    </g>
+  </g>
+  -->
 
 </svg>
 </body>
